@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AbsoluteLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget30"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg"
+    android:padding="10px" >
+
+    <ImageView
+        android:id="@+id/connectImg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_x="25dip"
+        android:layout_y="1px"
+        android:src="@drawable/connect_off" >
+    </ImageView>
+
+    <GridView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/GridViewPalettes"
+        android:layout_width="500px"
+        android:layout_height="420px"
+        android:layout_x="0px"
+        android:layout_y="45px"
+        android:columnWidth="90dp"
+        android:gravity="center"
+        android:horizontalSpacing="10dp"
+        android:numColumns="auto_fit"
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="10dp" />
+
+    <ImageView
+        android:id="@+id/PaletteAct"
+        android:layout_width="95px"
+        android:layout_height="95px"
+        android:layout_x="535px"
+        android:layout_y="54px"
+        android:src="@drawable/a_blanco" />
+
+</AbsoluteLayout>
