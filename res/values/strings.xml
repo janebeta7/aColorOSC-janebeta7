@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">aColorOSC 1.0</string>
     <string name="main_screen">aColorOSC</string>
     <string name="splash_screen">aColorOSC</string>
-    <string name="connect">Connect</string>
- 
-  <string name="menu_settings">Settings</string>
-  <string name="menu_disconnect">Disconnect</string>
+    <string name="connect">connect</string>
+    <string name="load">load</string>
+    <string name="menu_settings">settings</string>
+    <string name="menu_info">info</string>
     <string name="menu_connect">Connect</string>
-
+ 	
+    <string name="location">Location</string>
+    <string name="cant_read_folder">folder can\'t be read!</string>
+    <string name="nnew">New</string>
+    <string name="select">Select</string>
+    <string name="file_name">File name:</string>
+    <string name="cancel">Cancel</string>
+    <string name="create">Save</string>
+    <string name="no_data">No Data</string>
+	<color name="gray">#ffff0000</color>
 </resources>

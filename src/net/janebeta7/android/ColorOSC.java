@@ -1,156 +1,247 @@
 package net.janebeta7.android;
 
-import java.net.InetSocketAddress;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.openintents.intents.FileManagerIntents;
+
+
+
+import net.janebeta7.android.R;
+
+import com.relivethefuture.osc.data.BasicOscListener;
+import com.relivethefuture.osc.data.OscMessage;
+import com.relivethefuture.osc.transport.OscServer;
 
 import android.app.Activity;
+import android.app.KeyguardManager;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 
-/*osclib*/
-
-
-
-import com.relivethefuture.osc.data.OscMessage;
-import com.relivethefuture.osc.transport.OscClient;
 
 public class ColorOSC extends Activity {
 
-	public static final int DEFAULT_OSC_PORT = 8000;
+	/*-------------------------------------------------------- */
+	public static final int DEFAULT_OSC_PORT = 55555;
 	protected static final int EDIT_PREFS = 1;
-	private OscClient sender;
-
-	private String oscAddress = "127.0.0.1";
+	private static final int REQUEST_LOAD = 0;
+	private static final String SelectionMode = null;
+	private static final int PICK_FOLDER_RESULT_CODE = 0;
+	private static final int PICK_FILE_RESULT_CODE = 0;
+	private static final int REQUEST_CODE_PICK_FILE_OR_DIRECTORY = 0;
+	private OscServer server;
 	private int oscPort = DEFAULT_OSC_PORT;
-	private String oscMsgPath = "/test/count";
-	private int timeout = 100;
-	private int curCount = 0;
+	private static final String filePath ="";
+
+	private static ImageAdapter imageAdapter;
 	private boolean isServiceStarted = false;
-	private	ImageAdapter imageAdapter;
+	protected EditText mEditText;
+	private String folderPath = "sdcard/aColorOSC"; //si no lo encuentra buscar otro por defecto
 
+	/*-------------------------------------------------------- */
 
-	/** Called when the activity iiis first created. */
+	@Override
+	public void onDestroy() {
+		stopTestClient();
+
+		super.onDestroy();
+	}
+
+	/***
+	 * This just starts the OSCTesterClient service.
+	 * 
+	 * In a real application you don't need this because presumably the user has
+	 * already started their own OSC client either on the phone or on a separate
+	 * device (e.g. a laptop connected via WiFi).
+	 */
+	private void startTestClient() {
+		Log.d("ColorOSC", "startTestClient:");
+		Intent intent = new Intent(this, OSCClientService.class);
+		startService(intent);
+	}
+
+	private void stopTestClient() {
+		Log.d("ColorOSC", "stopTestClient:");
+		Intent intent = new Intent(this, OSCClientService.class);
+		stopService(intent);
+	}
+
+	public static int getColor() {
+		int numColors = imageAdapter.getColor();
+		return numColors;
+	}
+
+	/**
+	 * Called when the activity is first created. The rest of this code is just
+	 * for demonstration.
+	 */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 
-		/*
-		 * This populates the default values from the preferences XML file. See
-		 * {@link DefaultValues} for more details.
-		 */
-		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+		/* desbloqueamos la pantalla en el emulador o devide de block */
+		KeyguardManager mKeyGuardManager = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+		mKeyGuardManager.newKeyguardLock("ColorOSC").disableKeyguard();
 
-		//reload prefs
-		SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(this);
-		try {
-			oscPort = Integer.parseInt(p.getString("pref_osc_port", String.valueOf(oscPort)));
-		}
-		catch (NumberFormatException e) {
-			Toast.makeText(this, "Invalid port in preferences", Toast.LENGTH_LONG);
-		}
-		try {
-			timeout = Integer.parseInt(p.getString("pref_timeout", String.valueOf(timeout)));
-		}
-		catch (NumberFormatException e) {
-			Toast.makeText(this, "Invalid timeout in preferences", Toast.LENGTH_LONG);
-		}
-		oscAddress = p.getString("pref_osc_addr", oscAddress);
-		//oscMsgPath  = p.getString("pref_osc_msg", oscMsgPath);
+		initImages();
+		
 
-
-
-		//start the osc client
-		if (sender == null) {
-			sender = new OscClient(true); 
-			InetSocketAddress addr = new InetSocketAddress(oscAddress, oscPort);
-			sender.connect(addr);
-		}
-
+	}
+	private void initImages(){
+		/* visualizamos la grilla de colores desde el folder especificado*/
 		GridView gridview = (GridView) findViewById(R.id.GridViewPalettes);
-		imageAdapter = new ImageAdapter(this);
+		final List<String> SD = ReadSDCard();
+		imageAdapter = new ImageAdapter(this,SD);
 		gridview.setAdapter(imageAdapter);
-
+		gridview.setOnItemClickListener(new OnItemClickListener() {
+	        public void onItemClick(AdapterView<?> parent,
+	          View v, int position, long id) {
+	         String imageInSD = SD.get(position);
+	         Log.d("onClick", "imageInSD [" + imageInSD + "]");
+	         imageAdapter.setImageGrande(imageInSD);
+	         imageAdapter.processColors(imageInSD);
+	         
+	        }
+	    });
+		
+		
+		/*Log.d("onClick", "position [" + position + "]");
+		imgView.setImageResource(mThumbIds[position]); //display image screen
+	
+		final AssetManager mgr = mContext.getAssets();
+		displayFiles(mgr,"set");
+		
+		BitmapFactory.Options bfoOptions = new BitmapFactory.Options(); 
+		bfoOptions.inScaled = false; 
+		
+		processColors(position);*/
+		//Log.d("ImageAdapter", "numColors:" + pixColors.size());
+		
 	}
-	public void sendData(){
-		Log.d("ColorOSC", "sendData:" );
-	}
-	protected void onHandleIntent(Intent intent) {
-		Toast.makeText(this, "OSCTester service starting", Toast.LENGTH_SHORT).show();
+	private List<String> ReadSDCard()
+	{
+	 List<String> tFileList = new ArrayList<String>();
 
-		curCount = 0;
-		while (curCount++ < timeout) {
-			//send a test osc message
-			if (sender != null) {
-				OscMessage m = new OscMessage(oscMsgPath);
-				m.addArgument(curCount);
-				try {
-					sender.sendPacket(m);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+	 //It have to be matched with the directory in SDCard
+	 File f = new File(folderPath);
+
+	 File[] files=f.listFiles();
+
+	 for(int i=0; i<files.length; i++)
+	 {
+	  File file = files[i];
+	  //add the selected file type only
+	  String curFile=file.getPath();
+	  String ext=curFile.substring(curFile.lastIndexOf(".")+1, 
+	    curFile.length()).toLowerCase();
+	  if(ext.equals("jpg")||ext.equals("gif")||ext.equals("png"))
+	  tFileList.add(file.getPath());
+	 }
+
+	 return tFileList;
+	}
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// See which child activity is calling us back.
+		super.onActivityResult(requestCode, resultCode, data);
+		Log.d("janebeta7", "resultCode [" + requestCode + "]");
+		switch (requestCode) {
+		case EDIT_PREFS:
+			// reload prefs
+			SharedPreferences p = PreferenceManager
+					.getDefaultSharedPreferences(this);
+			try {
+				oscPort = Integer.parseInt(p.getString("pref_osc_port",
+						String.valueOf(DEFAULT_OSC_PORT)));
+			} catch (NumberFormatException e) {
+				Toast.makeText(this, "Invalid port in preferences",
+						Toast.LENGTH_LONG);
 			}
 
+			break;
+		case REQUEST_CODE_PICK_FILE_OR_DIRECTORY:
+			if (resultCode == RESULT_OK && data != null) {
+				Toast.makeText(this, "data"+data,
+						Toast.LENGTH_LONG);
+				// obtain the folderPath
+				Uri fileUri = data.getData();
+				if (fileUri != null) {
+					 folderPath = fileUri.getPath();
+					if (folderPath != null) {
+						//mEditText.setText(filePath);
+						Log.d("janebeta7", "folderPath [" + folderPath + "]");
+						initImages();
 
-			// For our sample, we just sleep for 2 seconds.
-			/*long endTime = System.currentTimeMillis() + 2*1000;
-			while (System.currentTimeMillis() < endTime) {
-				synchronized (this) {
-					try {
-						wait(endTime - System.currentTimeMillis());
-					} catch (Exception e) {
+					}
+					else
+					{
+						Log.d("janebeta7", "NO FOLDER PATH FOUND- CHOOSE ANOTHER FOLDER");
 					}
 				}
-			}*/
-		}
-	}
-	// send an osc message
-	public void send(String msg) {
-		// @+id/GridViewPalettes
-		// Call getDrawable to get the image
-		// button.setBackgroundResource(R.drawable.connect_off);
-		// button.setBackgroundResource(R.drawable.icon);
-		OscMessage msg_ = new OscMessage(msg);
-		if (msg_ != null) {
-			try {
-				sender.sendPacket(msg_);
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
-		}
+			break;
+        }
 	}
 
+	/*------------------------ CREAMOS ACCIONES DE BOTON MENU-----------------------------------*/
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.app_menu, menu);
 		return true;
 	}
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data){
-		// See which child activity is calling us back.
-		switch (requestCode) {
-		case EDIT_PREFS:
-			//reload prefs
-			SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(this);
-			try {
-				oscPort = Integer.parseInt(p.getString("pref_osc_port", String.valueOf(DEFAULT_OSC_PORT)));
-			}
-			catch (NumberFormatException e) {
-				Toast.makeText(this, "Invalid port in preferences", Toast.LENGTH_LONG);
-			}
-
-
-			break;
-		} 
+	 /**
+     * Opens the file manager to pick a directory.
+     */
+    private void pickDirectory() {
+		
+		
+		// Note the different intent: PICK_DIRECTORY
+		Intent intent = new Intent(FileManagerIntents.ACTION_PICK_DIRECTORY);
+		
+		// Construct URI from file name.
+		File file = new File(folderPath);
+		intent.setData(Uri.fromFile(file));
+		
+		// Set fancy title and button (optional)
+		intent.putExtra(FileManagerIntents.EXTRA_TITLE, "select a folder");
+		intent.putExtra(FileManagerIntents.EXTRA_BUTTON_TEXT, "select");
+		
+		try {
+	
+			startActivityForResult(intent, REQUEST_CODE_PICK_FILE_OR_DIRECTORY);
+		} catch (ActivityNotFoundException e) {
+			// No compatible file manager was found.
+			Toast.makeText(this,"No file manager installed", 
+					Toast.LENGTH_SHORT).show();
+		}
 	}
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
@@ -158,27 +249,32 @@ public class ColorOSC extends Activity {
 		switch (item.getItemId()) {
 		case R.id.settings:
 			System.out.println("settings");
-			Intent intent = new Intent(this, OSCTesterClientPreferences.class);
-			startActivityForResult(intent, EDIT_PREFS);
+			Intent intent2 = new Intent(this, aColorPreferences.class);
+			startActivityForResult(intent2, EDIT_PREFS);
 			return true;
-		case R.id.disconnect:
-			Toast.makeText(this, "disconnect", Toast.LENGTH_SHORT).show(); 
+		case R.id.info:
+			Toast.makeText(this, "info", Toast.LENGTH_SHORT).show();
+			return true;
+		case R.id.load:
+
+			pickDirectory();
+			
 			return true;
 		case R.id.connect:
-			Toast.makeText(this, "connect on:"+ oscPort +"to"+oscAddress, Toast.LENGTH_SHORT).show(); 
+
+			if (!isServiceStarted) {
+				startTestClient();
+				((MenuItem) item).setTitle("disconnect");
+				Toast.makeText(this, "connect", Toast.LENGTH_SHORT).show();
+			} else {
+				stopTestClient();
+				((MenuItem) item).setTitle("connect");
+				Toast.makeText(this, "disconnect", Toast.LENGTH_SHORT).show();
+			}
+			isServiceStarted = !isServiceStarted;
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
 	}
-	@Override
-	public void onDestroy() {
-		if (sender != null) {
-			sender.disconnect();
-			sender = null;
-		}
-		Toast.makeText(this, "OSCTester service done", Toast.LENGTH_SHORT).show(); 
-		super.onDestroy();
-	}
-
 }

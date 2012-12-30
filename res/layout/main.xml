@@ -35,6 +35,6 @@
         android:layout_height="95px"
         android:layout_x="535px"
         android:layout_y="54px"
-        android:src="@drawable/a_blanco" />
+         />
 
 </AbsoluteLayout>
