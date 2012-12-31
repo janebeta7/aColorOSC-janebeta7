@@ -2,7 +2,9 @@ package net.janebeta7.android;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import org.openintents.intents.FileManagerIntents;
@@ -63,6 +65,7 @@ public class ColorOSC extends Activity {
 	private boolean isServiceStarted = false;
 	protected EditText mEditText;
 	private String folderPath = "sdcard/aColorOSC"; //si no lo encuentra buscar otro por defecto
+	private int contFiles;
 
 	/*-------------------------------------------------------- */
 
@@ -109,10 +112,24 @@ public class ColorOSC extends Activity {
 		/* desbloqueamos la pantalla en el emulador o devide de block */
 		KeyguardManager mKeyGuardManager = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
 		mKeyGuardManager.newKeyguardLock("ColorOSC").disableKeyguard();
-
+		/*if (isMediaMounted()) initImages();
+		else pickDirectory();*/
 		initImages();
 		
 
+	}
+	private boolean isMediaMounted(){
+		String state = Environment.getExternalStorageState();
+
+		if (Environment.MEDIA_MOUNTED.equals(state)) {
+			return true;
+
+		} else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+			return true;
+		} else {
+			return false;
+		}
+		
 	}
 	private void initImages(){
 		/* visualizamos la grilla de colores desde el folder especificado*/
@@ -147,24 +164,30 @@ public class ColorOSC extends Activity {
 	}
 	private List<String> ReadSDCard()
 	{
+		contFiles =0;
 	 List<String> tFileList = new ArrayList<String>();
 
 	 //It have to be matched with the directory in SDCard
 	 File f = new File(folderPath);
 
 	 File[] files=f.listFiles();
-
+	 Log.d("janebeta7", "ReadSDCard >" + files.length + "");
 	 for(int i=0; i<files.length; i++)
 	 {
 	  File file = files[i];
-	  //add the selected file type only
 	  String curFile=file.getPath();
+	  String curName=file.getName();
 	  String ext=curFile.substring(curFile.lastIndexOf(".")+1, 
 	    curFile.length()).toLowerCase();
-	  if(ext.equals("jpg")||ext.equals("gif")||ext.equals("png"))
-	  tFileList.add(file.getPath());
+	  int namePoint=curName.lastIndexOf("_"); //prevenir que lea archivos que empiecen por . (ocultos)
+	  if((ext.equals("jpg")||ext.equals("gif")||ext.equals("png")) && (namePoint != 1) && (file.canRead()))
+	  {
+		  tFileList.add(file.getPath());
+		  Log.d("janebeta7", "ReadSDCard >curFile" + curFile + "");
+		  contFiles ++;
+	  }
 	 }
-
+	 Log.d("janebeta7", "ReadSDCard >contFiles" + contFiles + "");
 	 return tFileList;
 	}
 	@Override
